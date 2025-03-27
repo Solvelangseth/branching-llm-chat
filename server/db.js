@@ -15,7 +15,11 @@ const db = new sqlite3.Database(dbPath, (err) => {
 
 // Create tables if they do not exist
 db.serialize(() => {
-  // Conversations table: stores conversation sessions
+  // Drop existing tables to avoid conflicts
+  db.run(`DROP TABLE IF EXISTS messages`);
+  db.run(`DROP TABLE IF EXISTS conversations`);
+
+  // Create conversations table
   db.run(`
     CREATE TABLE IF NOT EXISTS conversations (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -23,15 +27,20 @@ db.serialize(() => {
     )
   `);
 
-  // Messages table: stores individual messages for each conversation
+  // Create messages table with branching support
   db.run(`
     CREATE TABLE IF NOT EXISTS messages (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       conversation_id INTEGER,
+      parent_id INTEGER NULL,
+      branch_root_id INTEGER NULL,
       role TEXT,
       content TEXT,
+      selected_text TEXT NULL,
       timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY(conversation_id) REFERENCES conversations(id)
+      FOREIGN KEY(conversation_id) REFERENCES conversations(id),
+      FOREIGN KEY(parent_id) REFERENCES messages(id),
+      FOREIGN KEY(branch_root_id) REFERENCES messages(id)
     )
   `);
 });
